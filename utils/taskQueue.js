@@ -27,7 +27,7 @@ const sendMail = async (mailId) => {
 export const addTask = async (mailId, date = Date.now()) => {
   //convert date to millisecond
   console.log("addTask", mailId);
-  let t = setTimeout(sendMail, 1000, mailId);
+  let t = setTimeout(sendMail, 10000, mailId);
   tasks.push(t);
   return tasks.length - 1;
 };
@@ -36,4 +36,8 @@ export const removeTask = (index) => {
   clearTimeout(tasks[index]);
 };
 
+export const reScheduleTask = (index, mailId, date = Date.now()) => {
+  //convert date to millisecond
+  tasks[index] = setTimeout(sendMail, 2000, mailId);
+};
 // exports = { addTask, removeTask };
