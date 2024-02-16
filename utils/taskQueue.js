@@ -1,33 +1,79 @@
 import { Schedulemail } from "../models/schedulemail.model.js";
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
+import { COMPLETED, FAILED } from "../constants.js";
+
+dotenv.config({
+  path: "./env",
+});
+
 const tasks = [];
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL,
+    pass: process.env.APP_PASSWORD,
+  },
+});
 
 const sendMail = async (mailId) => {
   const mailData = await Schedulemail.findById(mailId);
   console.log(mailData);
-  //   const transporter = nodemailer.createTransport({
-  //     service: "gmail",
-  //     host: "smtp.gmail.com",
-  //     port: 587,
-  //     secure: false,
-  //     auth: {
-  //       user: process.env.EMAIL,
-  //       pass: process.env.APP_PASSWORD,
-  //     },
-  //   });
-  //   let info = await transporter.sendMail({
-  //     from: mailData.from,
-  //     to: mailData.to,
-  //     subject: mailData.subject,
-  //     text: mailData.text,
-  //   });
+  let date = new Date();
+  console.log(date, mailData.date);
+
+  let info = await transporter.sendMail({
+    from: mailData.from,
+    to: mailData.to,
+    subject: mailData.subject,
+    text: mailData.content,
+  });
+
+  console.log(info);
+
+  let dem;
+
+  if (info.response.split(" ")[0] === "250") {
+    dem = await Schedulemail.findByIdAndUpdate(
+      mailId,
+      {
+        $set: { status: COMPLETED, messageId: info.messageId },
+        $unset: { taskId: 1 },
+      },
+      { new: true }
+    );
+  } else {
+    dem = await Schedulemail.findByIdAndUpdate(
+      mailId,
+      {
+        $set: { status: FAILED },
+        $unset: { taskId: 1 },
+      },
+      { new: true }
+    );
+  }
+  console.log(dem);
 
   //once its completed update the status in database
 };
 
-export const addTask = async (mailId, date = Date.now()) => {
-  //convert date to millisecond
+const getTimer = async (date) => {
+  let currentdate = new Date().getTime();
+  let scheduledDate = new Date(date).getTime();
+  let timer = scheduledDate - currentdate;
+  console.log(timer);
+
+  return timer;
+};
+
+export const addTask = async (mailId, date) => {
   console.log("addTask", mailId);
-  let t = setTimeout(sendMail, 10000, mailId);
+  let counter = await getTimer(date);
+  let t = setTimeout(sendMail, counter, mailId);
   tasks.push(t);
   return tasks.length - 1;
 };
@@ -36,8 +82,7 @@ export const removeTask = (index) => {
   clearTimeout(tasks[index]);
 };
 
-export const reScheduleTask = (index, mailId, date = Date.now()) => {
-  //convert date to millisecond
-  tasks[index] = setTimeout(sendMail, 2000, mailId);
+export const reScheduleTask = async (index, mailId, date) => {
+  let counter = await getTimer(date);
+  tasks[index] = setTimeout(sendMail, counter, mailId);
 };
-// exports = { addTask, removeTask };

@@ -27,6 +27,9 @@ const schedulemailSchema = new Schema(
       enum: [PENDING, FAILED, COMPLETED, CANCELLED],
       default: PENDING,
     },
+    messageId: {
+      type: String,
+    },
   },
   { timestamps: true }
 );
