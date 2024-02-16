@@ -1,13 +1,13 @@
 import { Schedulemail } from "../models/schedulemail.model.js";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
-import { COMPLETED, FAILED } from "../constants.js";
+import { COMPLETED, FAILED, PENDING } from "../constants.js";
 
 dotenv.config({
   path: "./env",
 });
 
-const tasks = [];
+const tasks = {};
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -71,18 +71,44 @@ const getTimer = async (date) => {
 };
 
 export const addTask = async (mailId, date) => {
-  console.log("addTask", mailId);
-  let counter = await getTimer(date);
-  let t = setTimeout(sendMail, counter, mailId);
-  tasks.push(t);
-  return tasks.length - 1;
+  try {
+    console.log("addTask", mailId);
+    let counter = await getTimer(date);
+    let t = setTimeout(sendMail, counter, mailId);
+    tasks[mailId] = t;
+
+    console.log(tasks);
+    return true;
+  } catch (error) {
+    return false;
+  }
 };
 
-export const removeTask = (index) => {
-  clearTimeout(tasks[index]);
+export const removeTask = (mailId) => {
+  clearTimeout(tasks[mailId]);
 };
 
-export const reScheduleTask = async (index, mailId, date) => {
+export const reScheduleTask = async (mailId, date) => {
+  removeTask(mailId);
   let counter = await getTimer(date);
-  tasks[index] = setTimeout(sendMail, counter, mailId);
+  tasks[mailId] = setTimeout(sendMail, counter, mailId);
+  return true;
+};
+
+export const restartPendingTask = async () => {
+  try {
+    const unSentMails = await Schedulemail.find({ status: PENDING });
+
+    console.log(unSentMails);
+
+    if (unSentMails.length != 0) {
+      unSentMails.map(async (mail) => {
+        await addTask(mail._id, mail.date);
+      });
+    }
+
+    console.log("tasks resheduled");
+  } catch (error) {
+    console.log(error);
+  }
 };

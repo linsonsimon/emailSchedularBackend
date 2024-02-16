@@ -7,6 +7,7 @@ import {
   viewUnSentScheduledMail,
   viewFailedScheduledMail,
   viewCancelledScheduledMail,
+  viewCompletedScheduledMail,
 } from "../controllers/mail.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
 
@@ -23,5 +24,6 @@ router.route("/delete").patch(deleteScheduledMail);
 router.route("/getUnsent").get(viewUnSentScheduledMail);
 router.route("/getfailed").get(viewFailedScheduledMail);
 router.route("/getcancelled").get(viewCancelledScheduledMail);
+router.route("/getCompleted").get(viewCompletedScheduledMail);
 
 export default router;

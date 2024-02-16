@@ -19,9 +19,6 @@ const schedulemailSchema = new Schema(
       type: String,
     },
     date: { type: Date, required: true, default: Date.now() },
-    taskId: {
-      type: Number,
-    },
     status: {
       type: String,
       enum: [PENDING, FAILED, COMPLETED, CANCELLED],

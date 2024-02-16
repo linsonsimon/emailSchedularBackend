@@ -4,13 +4,13 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
-import { addTask, removeTask } from "../utils/taskQueue.js";
+import { addTask, removeTask, reScheduleTask } from "../utils/taskQueue.js";
 import { PENDING, FAILED, COMPLETED, CANCELLED } from "../constants.js";
 
 const sendMail = async (req, res) => {
-  const { date } = req.body;
+  const { date, from, to, subject, content } = req.body;
   //   let currentdate = new Date().getTime();
-  console.log(date);
+  console.log(date, from, to, subject, content);
 
   try {
     res.status(200).json({ message: date });
@@ -23,10 +23,11 @@ const scheduleMail = asyncHandler(async (req, res) => {
   //get data
   const { from, to, subject, content, date } = req.body;
 
+  console.log(from, to, subject, content, date);
+
   try {
     if (
       [from, subject, content, date].some((field) => {
-        console.log(field?.trim() === "", !field);
         return field?.trim() === "" || !field;
       })
     ) {
@@ -46,18 +47,16 @@ const scheduleMail = asyncHandler(async (req, res) => {
       throw new ApiError(500, "Something went wrong will scheduling the mail");
     }
 
-    const taskid = await addTask(newMail._id, date);
-    console.log(taskid);
+    const isScheduled = await addTask(newMail._id, date);
 
-    const maildata = await Schedulemail.findById(newMail._id);
-
-    maildata.taskId = taskid;
-
-    maildata.save();
+    if (!isScheduled) {
+      console.log("unable to schedule");
+    }
 
     res
       .status(200)
       .json(new ApiResponse(200, { newMail }, "scheduled successfully"));
+    // res.status(200).json({ message: date });
   } catch (error) {
     res
       .status(error.statusCode)
@@ -93,9 +92,14 @@ const reScheduleMail = async (req, res) => {
     if (!maildata) {
       throw new ApiError(401, "Invalid mailID");
     }
+    if (maildata.status === COMPLETED) {
+      throw new ApiError(401, "task already completed");
+    }
 
-    const taskid = await addTask(maildata._id, date);
-    console.log(taskid);
+    const isRescheduled = await reScheduleTask(maildata._id, date);
+    if (!isRescheduled) {
+      console.log("unable to reshedule");
+    }
 
     res
       .status(200)
@@ -133,12 +137,11 @@ const deleteScheduledMail = async (req, res) => {
       throw new ApiError(401, "task already completed");
     }
 
-    removeTask(maildata.taskId);
+    removeTask(maildata._id);
 
     const updatedMail = await Schedulemail.findByIdAndUpdate(
       mailId,
       {
-        $unset: { taskId: 1 },
         $set: { status: CANCELLED },
       },
       { new: true }
@@ -164,6 +167,8 @@ const viewUnSentScheduledMail = async (req, res) => {
       throw new ApiError(404, "No mails available");
     }
 
+    console.log(unSentMails);
+
     res
       .status(200)
       .json(
@@ -184,6 +189,8 @@ const viewFailedScheduledMail = async (req, res) => {
     if (!failedMails) {
       throw new ApiError(404, "No mails available");
     }
+
+    console.log(failedMails);
 
     res
       .status(200)
@@ -206,6 +213,8 @@ const viewCancelledScheduledMail = async (req, res) => {
       throw new ApiError(404, "No mails available");
     }
 
+    console.log(cancelledMails);
+
     res
       .status(200)
       .json(
@@ -217,6 +226,29 @@ const viewCancelledScheduledMail = async (req, res) => {
       .json(new ApiResponse(error.statusCode, {}, error.message));
   }
 };
+
+const viewCompletedScheduledMail = async (req, res) => {
+  try {
+    const completedMails = await Schedulemail.find({ status: COMPLETED });
+
+    if (!completedMails) {
+      throw new ApiError(404, "No mails available");
+    }
+
+    console.log(completedMails);
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(200, { completedMails }, "mails fetched successfully")
+      );
+  } catch (error) {
+    res
+      .status(error.statusCode)
+      .json(new ApiResponse(error.statusCode, {}, error.message));
+  }
+};
+
 export {
   sendMail,
   scheduleMail,
@@ -225,4 +257,5 @@ export {
   viewUnSentScheduledMail,
   viewFailedScheduledMail,
   viewCancelledScheduledMail,
+  viewCompletedScheduledMail,
 };
