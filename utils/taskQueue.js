@@ -22,9 +22,6 @@ const transporter = nodemailer.createTransport({
 
 const sendMail = async (mailId) => {
   const mailData = await Schedulemail.findById(mailId);
-  console.log(mailData);
-  let date = new Date();
-  console.log(date, mailData.date);
 
   let info = await transporter.sendMail({
     from: mailData.from,
@@ -65,7 +62,6 @@ const getTimer = async (date) => {
   let currentdate = new Date().getTime();
   let scheduledDate = new Date(date).getTime();
   let timer = scheduledDate - currentdate;
-  console.log(timer);
 
   return timer;
 };
@@ -76,8 +72,6 @@ export const addTask = async (mailId, date) => {
     let counter = await getTimer(date);
     let t = setTimeout(sendMail, counter, mailId);
     tasks[mailId] = t;
-
-    console.log(tasks);
     return true;
   } catch (error) {
     return false;
@@ -99,7 +93,7 @@ export const restartPendingTask = async () => {
   try {
     const unSentMails = await Schedulemail.find({ status: PENDING });
 
-    console.log(unSentMails);
+    // console.log(unSentMails);
 
     if (unSentMails.length != 0) {
       unSentMails.map(async (mail) => {

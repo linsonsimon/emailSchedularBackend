@@ -23,13 +23,13 @@ const scheduleMail = asyncHandler(async (req, res) => {
   //get data
   const { from, to, subject, content, date } = req.body;
 
-  console.log(from, to, subject, content, date);
-
   try {
     if (
       [from, subject, content, date].some((field) => {
         return field?.trim() === "" || !field;
-      })
+      }) ||
+      !to ||
+      to?.length == 0
     ) {
       console.log("error");
       throw new ApiError(400, "All fields are required");
@@ -51,6 +51,7 @@ const scheduleMail = asyncHandler(async (req, res) => {
 
     if (!isScheduled) {
       console.log("unable to schedule");
+      throw new ApiError(500, "Something went wrong will scheduling the mail");
     }
 
     res
@@ -69,7 +70,8 @@ const reScheduleMail = async (req, res) => {
   //clear previously scheduled Timeout
   //create a new setTimeout
   //update the database with the new data
-  const { mailId, from, to, subject, content, date } = req.body;
+  const { from, to, subject, content, date } = req.body;
+  const mailId = req.params.mailId;
 
   try {
     if (
@@ -99,6 +101,7 @@ const reScheduleMail = async (req, res) => {
     const isRescheduled = await reScheduleTask(maildata._id, date);
     if (!isRescheduled) {
       console.log("unable to reshedule");
+      throw new ApiError(500, "Something went wrong will scheduling the mail");
     }
 
     res
@@ -122,7 +125,7 @@ const deleteScheduledMail = async (req, res) => {
   //but the data will still be there in database with status as cancelled
   //find the data from the database
   //clear the Timeout
-  const { mailId } = req.body;
+  const mailId = req.params.mailId;
 
   try {
     const maildata = await Schedulemail.findById(mailId);
@@ -167,8 +170,6 @@ const viewUnSentScheduledMail = async (req, res) => {
       throw new ApiError(404, "No mails available");
     }
 
-    console.log(unSentMails);
-
     res
       .status(200)
       .json(
@@ -189,8 +190,6 @@ const viewFailedScheduledMail = async (req, res) => {
     if (!failedMails) {
       throw new ApiError(404, "No mails available");
     }
-
-    console.log(failedMails);
 
     res
       .status(200)
@@ -213,8 +212,6 @@ const viewCancelledScheduledMail = async (req, res) => {
       throw new ApiError(404, "No mails available");
     }
 
-    console.log(cancelledMails);
-
     res
       .status(200)
       .json(
@@ -234,8 +231,6 @@ const viewCompletedScheduledMail = async (req, res) => {
     if (!completedMails) {
       throw new ApiError(404, "No mails available");
     }
-
-    console.log(completedMails);
 
     res
       .status(200)
