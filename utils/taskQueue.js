@@ -47,7 +47,7 @@ const sendMail = async (mailId) => {
       },
       { new: true }
     );
-    myCache.del("completedMails");
+    myCache.del(["completedMails", "unSentMails"]);
   } else {
     dem = await Schedulemail.findByIdAndUpdate(
       mailId,
@@ -57,9 +57,8 @@ const sendMail = async (mailId) => {
       },
       { new: true }
     );
-    myCache.del("failedMails");
+    myCache.del(["failedMails", "unSentMails"]);
   }
-  myCache.del("unSentMails");
 
   console.log(dem);
 

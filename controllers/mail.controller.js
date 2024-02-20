@@ -109,9 +109,7 @@ const reScheduleMail = async (req, res) => {
       console.log("unable to reshedule");
       throw new ApiError(500, "Something went wrong will scheduling the mail");
     }
-    myCache.del("unSentMails");
-    myCache.del("failedMails");
-    myCache.del("cancelledMails");
+    myCache.del(["unSentMails", "failedMails", "cancelledMails"]);
 
     res
       .status(200)
