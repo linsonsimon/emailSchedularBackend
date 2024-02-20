@@ -7,6 +7,10 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { addTask, removeTask, reScheduleTask } from "../utils/taskQueue.js";
 import { PENDING, FAILED, COMPLETED, CANCELLED } from "../constants.js";
 
+import NodeCache from "node-cache";
+
+const myCache = new NodeCache();
+
 const sendMail = async (req, res) => {
   const { date, from, to, subject, content } = req.body;
   //   let currentdate = new Date().getTime();
@@ -48,6 +52,8 @@ const scheduleMail = asyncHandler(async (req, res) => {
     }
 
     const isScheduled = await addTask(newMail._id, date);
+
+    myCache.del("unSentMails");
 
     if (!isScheduled) {
       console.log("unable to schedule");
@@ -103,6 +109,9 @@ const reScheduleMail = async (req, res) => {
       console.log("unable to reshedule");
       throw new ApiError(500, "Something went wrong will scheduling the mail");
     }
+    myCache.del("unSentMails");
+    myCache.del("failedMails");
+    myCache.del("cancelledMails");
 
     res
       .status(200)
@@ -141,6 +150,8 @@ const deleteScheduledMail = async (req, res) => {
     }
 
     removeTask(maildata._id);
+    myCache.del("unSentMails");
+    myCache.del("cancelledMails");
 
     const updatedMail = await Schedulemail.findByIdAndUpdate(
       mailId,
@@ -163,8 +174,15 @@ const deleteScheduledMail = async (req, res) => {
 const viewUnSentScheduledMail = async (req, res) => {
   //fecth all the scheduled mails which are yet to be completed
 
+  let unSentMails;
+
   try {
-    const unSentMails = await Schedulemail.find({ status: PENDING });
+    if (myCache.has("unSentMails")) {
+      unSentMails = JSON.parse(myCache.get("unSentMails"));
+    } else {
+      unSentMails = await Schedulemail.find({ status: PENDING });
+      myCache.set("unSentMails", JSON.stringify(unSentMails));
+    }
 
     if (!unSentMails) {
       throw new ApiError(404, "No mails available");
@@ -185,7 +203,13 @@ const viewUnSentScheduledMail = async (req, res) => {
 const viewFailedScheduledMail = async (req, res) => {
   //fecth all the scheduled mails which are failed
   try {
-    const failedMails = await Schedulemail.find({ status: FAILED });
+    let failedMails;
+    if (myCache.has("failedMails")) {
+      failedMails = JSON.parse(myCache.get("failedMails"));
+    } else {
+      failedMails = await Schedulemail.find({ status: FAILED });
+      myCache.set("failedMails", JSON.stringify(failedMails));
+    }
 
     if (!failedMails) {
       throw new ApiError(404, "No mails available");
@@ -206,7 +230,13 @@ const viewFailedScheduledMail = async (req, res) => {
 const viewCancelledScheduledMail = async (req, res) => {
   //fecth all the scheduled mails which are failed
   try {
-    const cancelledMails = await Schedulemail.find({ status: CANCELLED });
+    let cancelledMails;
+    if (myCache.has("cancelledMails")) {
+      cancelledMails = JSON.parse(myCache.get("cancelledMails"));
+    } else {
+      cancelledMails = await Schedulemail.find({ status: CANCELLED });
+      myCache.set("cancelledMails", JSON.stringify(cancelledMails));
+    }
 
     if (!cancelledMails) {
       throw new ApiError(404, "No mails available");
@@ -226,7 +256,13 @@ const viewCancelledScheduledMail = async (req, res) => {
 
 const viewCompletedScheduledMail = async (req, res) => {
   try {
-    const completedMails = await Schedulemail.find({ status: COMPLETED });
+    let completedMails;
+    if (myCache.has("completedMails")) {
+      completedMails = JSON.parse(myCache.get("completedMails"));
+    } else {
+      completedMails = await Schedulemail.find({ status: COMPLETED });
+      myCache.set("completedMails", JSON.stringify(completedMails));
+    }
 
     if (!completedMails) {
       throw new ApiError(404, "No mails available");

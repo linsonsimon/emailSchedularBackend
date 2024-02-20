@@ -3,6 +3,10 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import { COMPLETED, FAILED, PENDING } from "../constants.js";
 
+import NodeCache from "node-cache";
+
+const myCache = new NodeCache();
+
 dotenv.config({
   path: "./env",
 });
@@ -43,6 +47,7 @@ const sendMail = async (mailId) => {
       },
       { new: true }
     );
+    myCache.del("completedMails");
   } else {
     dem = await Schedulemail.findByIdAndUpdate(
       mailId,
@@ -52,7 +57,10 @@ const sendMail = async (mailId) => {
       },
       { new: true }
     );
+    myCache.del("failedMails");
   }
+  myCache.del("unSentMails");
+
   console.log(dem);
 
   //once its completed update the status in database
